@@ -7,7 +7,6 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace ReportOnPizzaData
 {
@@ -21,11 +20,10 @@ namespace ReportOnPizzaData
             var httpResponseMessage = MakeHttpCall(PizzaToppingUrl);
             if (httpResponseMessage == null) { return; }
 
+            var pizzaOrders = JsonConvert.DeserializeObject<List<PizzaOrders>>(httpResponseMessage.Content.ReadAsStringAsync().Result);
             var toppings = OrderToppings(pizzaOrders);
             var toppingCounts = CreateDistinctToppingList(toppings);
             var topToppingCounts = FindTopToppingCounts(toppingCounts);
-
-            //var xTest = GetPizzaOrdersAsync(PizzaToppingUrl);
 
             PrintToppingCounts(topToppingCounts);
         }
@@ -66,47 +64,6 @@ namespace ReportOnPizzaData
             return toppingCounts;
         }
 
-        private static async Task<List<PizzaOrders>> GetPizzaOrdersAsync(string apiUrl)
-        {
-            List<PizzaOrders> pizzaOrders = null;
-
-            using (var client = new HttpClient())
-            {
-                client.BaseAddress = new Uri(apiUrl);
-                client.DefaultRequestHeaders.Accept.Clear();
-                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-                var response = await client.GetAsync(apiUrl);
-
-                if (response.IsSuccessStatusCode)
-                {
-                    pizzaOrders = JsonConvert.DeserializeObject<List<PizzaOrders>>(response.Content.ReadAsStringAsync().Result);
-                }
-            }
-
-            return pizzaOrders;
-        }
-
-        private static async Task<HttpResponseMessage> MakeHttpCallAsync(string apiUrl)
-        {
-            using (var client = new HttpClient())
-            {
-                client.BaseAddress = new Uri(apiUrl);
-                client.DefaultRequestHeaders.Accept.Clear();
-                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-                var response = await client.GetAsync(apiUrl);
-
-                if (response.IsSuccessStatusCode)
-                {
-                    return response;
-                }
-            }
-
-            Console.WriteLine("AN ERROR OCCURRED TRYING TO CONTACT THE SERVER.");
-            Thread.Sleep(10000);
-
-            return null;
-        }
-
         private static HttpResponseMessage MakeHttpCall(string apiUrl)
         {
             var httpResponseMessage = new HttpResponseMessage();
@@ -119,6 +76,10 @@ namespace ReportOnPizzaData
 
                 try
                 {
+                    if (httpResponseMessage.IsSuccessStatusCode)
+                    {
+                        httpResponseMessage = client.GetAsync(apiUrl).Result;
+                    }
                     httpResponseMessage = client.GetAsync(apiUrl).Result;
                 }
                 catch (Exception)
